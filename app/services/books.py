@@ -2,7 +2,7 @@
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select,func,or_
 from sqlalchemy.orm import Session
 
 from app.models import Book
@@ -55,24 +55,44 @@ def list_books(
     limit: int = 20,
     offset: int = 0,
 ) -> BookPage:
-    """Search the catalogue.
-
-    Rules:
-    - ``q`` matches title OR author, case-insensitive substring.
-    - ``restricted`` filters exactly; ``min_price``/``max_price`` are inclusive.
-    - Sorted by ``sort`` (title / price, ``-`` for descending) with ties broken by id;
-      default order is id ascending.
-    - ``total`` counts all matches before ``limit``/``offset`` are applied.
-    """
+    """Search the catalogue."""
     query = select(Book)
+
+    # 1. Search filter (title OR author)
     if q:
-        query = query.where(Book.title.icontains(q, autoescape=True))
+        query = query.where(
+            or_(
+                Book.title.icontains(q, autoescape=True),
+                Book.author.icontains(q, autoescape=True),
+            )
+        )
+
+    # 2. Restricted filter
     if restricted is not None:
         query = query.where(Book.restricted == restricted)
-    # TODO: min_price / max_price filters
 
-    # TODO: apply ``sort``
-    books = db.scalars(query.order_by(Book.id.asc()).limit(limit).offset(offset)).all()
-    total = len(books)
+    # 3. Price range filters (inclusive)
+    if min_price is not None:
+        query = query.where(Book.price_cents >= min_price)
+    if max_price is not None:
+        query = query.where(Book.price_cents <= max_price)
+
+    # 4. Total count BEFORE pagination
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+
+    # 5. Sorting (ties broken by id ascending)
+    if sort == "title":
+        order = (Book.title.asc(), Book.id.asc())
+    elif sort == "-title":
+        order = (Book.title.desc(), Book.id.asc())
+    elif sort == "price":
+        order = (Book.price_cents.asc(), Book.id.asc())
+    elif sort == "-price":
+        order = (Book.price_cents.desc(), Book.id.asc())
+    else:
+        order = (Book.id.asc(),)
+
+    # 6. Apply sorting + pagination
+    books = db.scalars(query.order_by(*order).limit(limit).offset(offset)).all()
 
     return BookPage(items=books, total=total, limit=limit, offset=offset)
