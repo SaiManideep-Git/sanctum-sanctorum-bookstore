@@ -136,6 +136,12 @@ class MemberStats(BaseModel):
     overdue_loans: int
     late_fees_cents: int
 
+class MemberPage(BaseModel):
+    items:List[MemberOut]
+    total :int
+    limit :int
+    offset :int
+
 
 # --- Orders -----------------------------------------------------------------------------
 
