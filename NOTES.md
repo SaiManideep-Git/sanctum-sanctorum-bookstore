@@ -78,6 +78,10 @@ Here is the step-by-step breakdown of what I did:
   `SPEC.md` defines overdue loans strictly as `now > due_at`. At the exact timestamp of `due_at`, a loan is still considered active, owes \$0 in late fees, and does not block new borrowing. I ensured all comparison logic consistently uses `>` rather than `>=`.
 - **Starter Bug in `tier_at_least`**:
   In `app/services/members.py`, the starter helper `tier_at_least` used a strict greater-than comparison (`index > minimum`). This caused `master` members to be incorrectly blocked from restricted books because their tier index equaled the minimum requirement. Updating this to `>=` resolved the access check accurately.
+- **Discovered Frontend Event Bug (Loan Return Button)**:
+  While all 202 backend tests in `pytest` passed (covering the FastAPI endpoints), manual smoke testing of the live web interface revealed that clicking the "Return" button on an active loan did not trigger any action.
+  Upon inspecting `frontend/app.js`, I identified that the table rendered `<button data-action="loan-return">` and the async `returnLoan(id, button)` helper was already implemented, but the global click listener's `switch (target.dataset.action)` block was missing `case 'loan-return'`.
+  I hooked up `case 'loan-return': returnLoan(id, target); break;` so that returning books, updating stock, and assessing late fees functions end-to-end in the browser UI.
 
 ---
 
