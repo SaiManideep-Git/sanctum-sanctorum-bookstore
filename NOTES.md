@@ -1,7 +1,7 @@
 # Sanctum Sanctorum Bookstore — Project Notes
 
 ## 1. Deployment
-- **Live URL**: [Add your live URL here once deployed, e.g. https://sanctum-bookstore.onrender.com]
+- **Live URL**: https://sanctum-sanctorum-bookstore.vercel.app/
 - **Notes to test**: The app runs with default seed data. You can access the API documentation at `/docs` or the web interface at `/`.
 
 ---
